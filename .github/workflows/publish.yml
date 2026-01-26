@@ -1,0 +1,68 @@
+name: Version & Publish
+
+on:
+  push:
+    branches: [main]
+
+# Prevent concurrent runs
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    # Skip version bump commits to avoid infinite loop
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Determine version bump
+        id: bump
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          if echo "$COMMIT_MSG" | grep -qi '\[major\]'; then
+            echo "type=major" >> "$GITHUB_OUTPUT"
+          elif echo "$COMMIT_MSG" | grep -qi '\[minor\]'; then
+            echo "type=minor" >> "$GITHUB_OUTPUT"
+          else
+            echo "type=patch" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version
+        run: npm version ${{ steps.bump.outputs.type }} -m "chore: release v%s [skip ci]"
+
+      - name: Publish to npm
+        run: pnpm publish --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Push version commit and tag
+        run: git push --follow-tags

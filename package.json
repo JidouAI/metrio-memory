@@ -1,0 +1,45 @@
+{
+  "name": "@metrio-ai/memory-service",
+  "version": "1.0.0",
+  "description": "Memory Service SDK for Metrio AI - multi-tenant memory management with pgvector",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "dotenv drizzle-kit generate",
+    "db:migrate": "dotenv drizzle-kit migrate",
+    "db:studio": "dotenv drizzle-kit studio",
+    "prepublishOnly": "pnpm build"
+  },
+  "keywords": ["memory", "ai", "pgvector", "multi-tenant"],
+  "author": "JidouAI",
+  "license": "ISC",
+  "dependencies": {
+    "drizzle-orm": "^0.45.1",
+    "metrioai-js-sdk": "^1.0.60",
+    "pg": "^8.17.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.10",
+    "@types/pg": "^8.16.0",
+    "dotenv-cli": "^11.0.0",
+    "drizzle-kit": "^0.31.8",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}
