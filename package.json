@@ -28,6 +28,10 @@
   "keywords": ["memory", "ai", "pgvector", "multi-tenant"],
   "author": "JidouAI",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JidouAI/metrio-memory.git"
+  },
   "dependencies": {
     "drizzle-orm": "^0.45.1",
     "metrioai-js-sdk": "^1.0.60",
