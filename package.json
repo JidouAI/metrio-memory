@@ -1,6 +1,6 @@
 {
   "name": "@metrio-ai/memory-service",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Memory Service SDK for Metrio AI - multi-tenant memory management with pgvector",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -25,7 +25,12 @@
     "db:studio": "dotenv drizzle-kit studio",
     "prepublishOnly": "pnpm build"
   },
-  "keywords": ["memory", "ai", "pgvector", "multi-tenant"],
+  "keywords": [
+    "memory",
+    "ai",
+    "pgvector",
+    "multi-tenant"
+  ],
   "author": "JidouAI",
   "license": "ISC",
   "repository": {
