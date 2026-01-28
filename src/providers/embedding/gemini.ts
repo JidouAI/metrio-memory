@@ -1,7 +1,7 @@
 import type { EmbeddingProvider } from '../../types';
 import { validateEmbedding } from './validate';
 
-const DEFAULT_MODEL = 'text-embedding-004';
+const DEFAULT_MODEL = 'gemini-embedding-001';
 const BATCH_SIZE = 100;
 const MODEL_PATTERN = /^[a-zA-Z0-9._-]+$/;
 

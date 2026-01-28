@@ -1,8 +1,8 @@
 import type { EmbeddingProvider } from '../../types';
 import { validateEmbedding } from './validate';
 
-const DEFAULT_MODEL = 'text-embedding-3-small';
-const VECTOR_DIMENSIONS = 768;
+const DEFAULT_MODEL = 'text-embedding-3-large';
+const VECTOR_DIMENSIONS = 3072;
 
 export class OpenAIEmbeddingProvider implements EmbeddingProvider {
   private apiKey: string;

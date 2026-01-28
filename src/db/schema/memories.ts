@@ -8,7 +8,7 @@ export const memories = pgTable('memories', {
   userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   content: text('content').notNull(),
   rawConversation: jsonb('raw_conversation'),
-  embedding: vector('embedding', { dimensions: 768 }),
+  embedding: vector('embedding', { dimensions: 3072 }),
   memoryType: varchar('memory_type', { length: 50 }).notNull(),
   importance: smallint('importance').default(5),
   metadata: jsonb('metadata').default({}),

@@ -21,7 +21,7 @@ export const userProfiles = pgTable('user_profiles', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull().unique(),
   summary: text('summary').default(''),
-  summaryEmbedding: vector('summary_embedding', { dimensions: 768 }),
+  summaryEmbedding: vector('summary_embedding', { dimensions: 3072 }),
   version: smallint('version').default(1),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),

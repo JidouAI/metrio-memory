@@ -15,6 +15,13 @@
       "when": 1769433477472,
       "tag": "0001_hnsw_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769567886361,
+      "tag": "0002_silky_psynapse",
+      "breakpoints": true
     }
   ]
 }
