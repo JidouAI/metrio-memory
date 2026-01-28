@@ -134,6 +134,36 @@ await memory.tenants.memories.promoteFromUser('dog-lab', {
 
 Types: `learned`, `feedback`, `pattern`, `exception`
 
+### Admin API
+
+Manage and inspect data via `memory.admin.*`:
+
+```typescript
+// List all tenants
+const tenants = await memory.admin.listTenants();
+
+// List users under a tenant
+const users = await memory.admin.listUsers('dog-lab');
+
+// List user memories (includes rawConversation)
+const memories = await memory.admin.listUserMemories('dog-lab', 'LINE_USER_ID');
+
+// List org notes and memories
+const notes = await memory.admin.listTenantNotes('dog-lab');
+const orgMemories = await memory.admin.listTenantMemories('dog-lab');
+
+// Purge (irreversible hard delete)
+await memory.admin.purgeUserMemories('dog-lab', 'LINE_USER_ID');
+await memory.admin.purgeTenantNotes('dog-lab');
+await memory.admin.purgeTenantMemories('dog-lab');
+```
+
+### `context.formatted` vs `getProfileSummary()`
+
+`getContext()` returns a `ContextResult` with a pre-built `formatted` string combining all four sections (org notes, org memories, user profile, recent memories) — designed to be injected directly into an LLM system prompt.
+
+`getProfileSummary()` returns only the user's profile summary (the 【客戶檔案】 portion), useful for displaying or editing in a dashboard.
+
 ## Configuration
 
 ```typescript
@@ -143,7 +173,7 @@ interface MemoryServiceConfig {
   embedding: {
     provider: 'gemini' | 'openai';
     apiKey: string;
-    model?: string; // default: text-embedding-004 (gemini), text-embedding-3-small (openai)
+    model?: string; // default: gemini-embedding-001 (gemini), text-embedding-3-large (openai)
   };
 
   extraction?: {
