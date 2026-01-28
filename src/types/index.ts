@@ -247,3 +247,14 @@ export interface AdminTenantNoteRecord {
   updatedAt: Date | null;
   expiresAt: Date | null;
 }
+
+export interface AdminSearchResult {
+  id: string;
+  userId: string;
+  userExternalId: string;
+  content: string;
+  memoryType: string;
+  importance: number | null;
+  similarity: number;
+  createdAt: Date | null;
+}

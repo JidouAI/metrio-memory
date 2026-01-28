@@ -32,6 +32,7 @@ import type {
   AdminTenantNoteRecord,
   AdminTenantRecord,
   AdminUserRecord,
+  AdminSearchResult,
 } from './types';
 
 export class MemoryService {
@@ -62,6 +63,7 @@ export class MemoryService {
   public readonly admin: {
     listTenants: () => Promise<AdminTenantRecord[]>;
     listUsers: (slug: string) => Promise<AdminUserRecord[]>;
+    searchMemories: (slug: string, query: string, options?: { limit?: number; threshold?: number }) => Promise<AdminSearchResult[]>;
     listUserMemories: (slug: string, userExternalId: string) => Promise<AdminMemoryRecord[]>;
     listTenantNotes: (slug: string) => Promise<AdminTenantNoteRecord[]>;
     listTenantMemories: (slug: string) => Promise<TenantMemoryRecord[]>;
@@ -84,7 +86,7 @@ export class MemoryService {
     this.memoryStore = new MemoryStore(db, this.embeddingProvider);
     this.tenantNoteService = new TenantNoteService(db, this.embeddingProvider);
     this.tenantMemoryService = new TenantMemoryService(db, this.embeddingProvider);
-    this.adminService = new AdminService(db);
+    this.adminService = new AdminService(db, this.embeddingProvider);
 
     this.tenants = {
       notes: {
@@ -125,6 +127,11 @@ export class MemoryService {
         const tenant = await this.tenantService.getBySlug(slug);
         if (!tenant) return [];
         return this.adminService.listUsers(tenant.id);
+      },
+      searchMemories: async (slug, query, options) => {
+        const tenant = await this.tenantService.getBySlug(slug);
+        if (!tenant) return [];
+        return this.adminService.searchMemories(tenant.id, query, options);
       },
       listUserMemories: async (slug, userExternalId) => {
         const resolved = await this.findExisting(slug, userExternalId);

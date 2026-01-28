@@ -1,10 +1,13 @@
-import { eq } from 'drizzle-orm';
+import { eq, desc, sql, and, gt } from 'drizzle-orm';
 import type { Database } from '../db';
 import { memories, tenantNotes, tenantMemories, tenants, users } from '../db/schema';
-import type { AdminMemoryRecord, AdminTenantNoteRecord, AdminTenantRecord, AdminUserRecord, TenantMemoryRecord } from '../types';
+import type { AdminMemoryRecord, AdminTenantNoteRecord, AdminTenantRecord, AdminUserRecord, AdminSearchResult, TenantMemoryRecord, EmbeddingProvider } from '../types';
 
 export class AdminService {
-  constructor(private db: Database) {}
+  constructor(
+    private db: Database,
+    private embeddingProvider: EmbeddingProvider,
+  ) {}
 
   async listTenants(): Promise<AdminTenantRecord[]> {
     return this.db
@@ -32,6 +35,45 @@ export class AdminService {
       })
       .from(users)
       .where(eq(users.tenantId, tenantId));
+  }
+
+  async searchMemories(
+    tenantId: string,
+    query: string,
+    options?: { limit?: number; threshold?: number },
+  ): Promise<AdminSearchResult[]> {
+    const queryEmbedding = await this.embeddingProvider.embed(query);
+    const limit = options?.limit ?? 10;
+    const threshold = options?.threshold ?? 0.3;
+
+    const similarity = sql<number>`1 - (${memories.embedding} <=> ${JSON.stringify(queryEmbedding)}::vector)`;
+
+    const results = await this.db
+      .select({
+        id: memories.id,
+        userId: memories.userId,
+        userExternalId: users.externalId,
+        content: memories.content,
+        memoryType: memories.memoryType,
+        importance: memories.importance,
+        similarity,
+        createdAt: memories.createdAt,
+      })
+      .from(memories)
+      .innerJoin(users, eq(memories.userId, users.id))
+      .where(
+        and(
+          eq(users.tenantId, tenantId),
+          gt(similarity, threshold),
+        ),
+      )
+      .orderBy(desc(similarity))
+      .limit(limit);
+
+    return results.map((r) => ({
+      ...r,
+      similarity: Number(r.similarity),
+    }));
   }
 
   async listUserMemories(userId: string): Promise<AdminMemoryRecord[]> {

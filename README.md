@@ -145,6 +145,13 @@ const tenants = await memory.admin.listTenants();
 // List users under a tenant
 const users = await memory.admin.listUsers('dog-lab');
 
+// Semantic search across all users in a tenant
+const results = await memory.admin.searchMemories('dog-lab', 'dog training', {
+  limit: 10,
+  threshold: 0.3
+});
+// → AdminSearchResult[] includes userId, userExternalId, content, similarity
+
 // List user memories (includes rawConversation)
 const memories = await memory.admin.listUserMemories('dog-lab', 'LINE_USER_ID');
 
