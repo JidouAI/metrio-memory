@@ -8,6 +8,7 @@ import { ProfileService } from './services/profile-service';
 import { MemoryStore } from './services/memory-store';
 import { TenantNoteService } from './services/tenant-note-service';
 import { TenantMemoryService } from './services/tenant-memory-service';
+import { AdminService } from './services/admin-service';
 import type {
   MemoryServiceConfig,
   EmbeddingProvider,
@@ -27,6 +28,8 @@ import type {
   AddTenantMemoryInput,
   PromoteFromUserInput,
   TenantMemoryRecord,
+  AdminMemoryRecord,
+  AdminTenantNoteRecord,
 } from './types';
 
 export class MemoryService {
@@ -39,6 +42,7 @@ export class MemoryService {
   private memoryStore: MemoryStore;
   private tenantNoteService: TenantNoteService;
   private tenantMemoryService: TenantMemoryService;
+  private adminService: AdminService;
 
   public readonly tenants: {
     notes: {
@@ -51,6 +55,15 @@ export class MemoryService {
       promoteFromUser: (slug: string, input: PromoteFromUserInput) => Promise<TenantMemoryRecord>;
       search: (slug: string, input: { query: string; limit?: number; type?: string }) => Promise<(TenantMemoryRecord & { similarity: number })[]>;
     };
+  };
+
+  public readonly admin: {
+    listUserMemories: (slug: string, userExternalId: string) => Promise<AdminMemoryRecord[]>;
+    listTenantNotes: (slug: string) => Promise<AdminTenantNoteRecord[]>;
+    listTenantMemories: (slug: string) => Promise<TenantMemoryRecord[]>;
+    purgeUserMemories: (slug: string, userExternalId: string) => Promise<{ deletedCount: number }>;
+    purgeTenantNotes: (slug: string) => Promise<{ deletedCount: number }>;
+    purgeTenantMemories: (slug: string) => Promise<{ deletedCount: number }>;
   };
 
   constructor(config: MemoryServiceConfig) {
@@ -67,6 +80,7 @@ export class MemoryService {
     this.memoryStore = new MemoryStore(db, this.embeddingProvider);
     this.tenantNoteService = new TenantNoteService(db, this.embeddingProvider);
     this.tenantMemoryService = new TenantMemoryService(db, this.embeddingProvider);
+    this.adminService = new AdminService(db);
 
     this.tenants = {
       notes: {
@@ -96,6 +110,39 @@ export class MemoryService {
           const tenant = await this.tenantService.getOrCreate(slug);
           return this.tenantMemoryService.search(tenant.id, input);
         },
+      },
+    };
+
+    this.admin = {
+      listUserMemories: async (slug, userExternalId) => {
+        const resolved = await this.findExisting(slug, userExternalId);
+        if (!resolved) return [];
+        return this.adminService.listUserMemories(resolved.user.id);
+      },
+      listTenantNotes: async (slug) => {
+        const tenant = await this.tenantService.getBySlug(slug);
+        if (!tenant) return [];
+        return this.adminService.listTenantNotes(tenant.id);
+      },
+      listTenantMemories: async (slug) => {
+        const tenant = await this.tenantService.getBySlug(slug);
+        if (!tenant) return [];
+        return this.adminService.listTenantMemories(tenant.id);
+      },
+      purgeUserMemories: async (slug, userExternalId) => {
+        const resolved = await this.findExisting(slug, userExternalId);
+        if (!resolved) return { deletedCount: 0 };
+        return this.adminService.purgeUserMemories(resolved.user.id);
+      },
+      purgeTenantNotes: async (slug) => {
+        const tenant = await this.tenantService.getBySlug(slug);
+        if (!tenant) return { deletedCount: 0 };
+        return this.adminService.purgeTenantNotes(tenant.id);
+      },
+      purgeTenantMemories: async (slug) => {
+        const tenant = await this.tenantService.getBySlug(slug);
+        if (!tenant) return { deletedCount: 0 };
+        return this.adminService.purgeTenantMemories(tenant.id);
       },
     };
   }

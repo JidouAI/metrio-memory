@@ -199,3 +199,32 @@ export interface TenantMemoryRecord {
   createdAt: Date | null;
   expiresAt: Date | null;
 }
+
+// --- Admin ---
+
+export interface AdminMemoryRecord {
+  id: string;
+  userId: string;
+  content: string;
+  rawConversation: unknown;
+  memoryType: string;
+  importance: number | null;
+  metadata: unknown;
+  createdAt: Date | null;
+  expiresAt: Date | null;
+}
+
+export interface AdminTenantNoteRecord {
+  id: string;
+  tenantId: string;
+  category: string;
+  title: string;
+  content: string;
+  isActive: boolean | null;
+  priority: number | null;
+  tags: string[] | null;
+  metadata: unknown;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+  expiresAt: Date | null;
+}
