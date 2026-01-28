@@ -160,7 +160,9 @@ const notes = await memory.admin.listTenantNotes('dog-lab');
 const orgMemories = await memory.admin.listTenantMemories('dog-lab');
 
 // Purge (irreversible hard delete)
-await memory.admin.purgeUserMemories('dog-lab', 'LINE_USER_ID');
+await memory.admin.purgeUserMemories('dog-lab', 'LINE_USER_ID');  // memories only
+await memory.admin.purgeUserProfile('dog-lab', 'LINE_USER_ID');   // profile only
+await memory.admin.purgeUserAll('dog-lab', 'LINE_USER_ID');       // memories + profile
 await memory.admin.purgeTenantNotes('dog-lab');
 await memory.admin.purgeTenantMemories('dog-lab');
 ```

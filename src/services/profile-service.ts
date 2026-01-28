@@ -37,4 +37,11 @@ export class ProfileService {
 
     return result[0];
   }
+
+  async delete(userId: string): Promise<{ deleted: boolean }> {
+    const result = await this.db
+      .delete(userProfiles)
+      .where(eq(userProfiles.userId, userId));
+    return { deleted: (result.rowCount ?? 0) > 0 };
+  }
 }

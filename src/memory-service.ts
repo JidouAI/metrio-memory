@@ -68,6 +68,8 @@ export class MemoryService {
     listTenantNotes: (slug: string) => Promise<AdminTenantNoteRecord[]>;
     listTenantMemories: (slug: string) => Promise<TenantMemoryRecord[]>;
     purgeUserMemories: (slug: string, userExternalId: string) => Promise<{ deletedCount: number }>;
+    purgeUserProfile: (slug: string, userExternalId: string) => Promise<{ deleted: boolean }>;
+    purgeUserAll: (slug: string, userExternalId: string) => Promise<{ memoriesDeleted: number; profileDeleted: boolean }>;
     purgeTenantNotes: (slug: string) => Promise<{ deletedCount: number }>;
     purgeTenantMemories: (slug: string) => Promise<{ deletedCount: number }>;
   };
@@ -152,6 +154,16 @@ export class MemoryService {
         const resolved = await this.findExisting(slug, userExternalId);
         if (!resolved) return { deletedCount: 0 };
         return this.adminService.purgeUserMemories(resolved.user.id);
+      },
+      purgeUserProfile: async (slug, userExternalId) => {
+        const resolved = await this.findExisting(slug, userExternalId);
+        if (!resolved) return { deleted: false };
+        return this.adminService.purgeUserProfile(resolved.user.id);
+      },
+      purgeUserAll: async (slug, userExternalId) => {
+        const resolved = await this.findExisting(slug, userExternalId);
+        if (!resolved) return { memoriesDeleted: 0, profileDeleted: false };
+        return this.adminService.purgeUserAll(resolved.user.id);
       },
       purgeTenantNotes: async (slug) => {
         const tenant = await this.tenantService.getBySlug(slug);

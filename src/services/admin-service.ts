@@ -1,6 +1,6 @@
 import { eq, desc, sql, and, gt } from 'drizzle-orm';
 import type { Database } from '../db';
-import { memories, tenantNotes, tenantMemories, tenants, users } from '../db/schema';
+import { memories, tenantNotes, tenantMemories, tenants, users, userProfiles } from '../db/schema';
 import type { AdminMemoryRecord, AdminTenantNoteRecord, AdminTenantRecord, AdminUserRecord, AdminSearchResult, TenantMemoryRecord, EmbeddingProvider } from '../types';
 
 export class AdminService {
@@ -136,6 +136,24 @@ export class AdminService {
       .delete(memories)
       .where(eq(memories.userId, userId));
     return { deletedCount: result.rowCount ?? 0 };
+  }
+
+  async purgeUserProfile(userId: string): Promise<{ deleted: boolean }> {
+    const result = await this.db
+      .delete(userProfiles)
+      .where(eq(userProfiles.userId, userId));
+    return { deleted: (result.rowCount ?? 0) > 0 };
+  }
+
+  async purgeUserAll(userId: string): Promise<{ memoriesDeleted: number; profileDeleted: boolean }> {
+    const [memoriesResult, profileResult] = await Promise.all([
+      this.purgeUserMemories(userId),
+      this.purgeUserProfile(userId),
+    ]);
+    return {
+      memoriesDeleted: memoriesResult.deletedCount,
+      profileDeleted: profileResult.deleted,
+    };
   }
 
   async purgeTenantNotes(tenantId: string): Promise<{ deletedCount: number }> {
