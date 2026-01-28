@@ -202,6 +202,25 @@ export interface TenantMemoryRecord {
 
 // --- Admin ---
 
+export interface AdminTenantRecord {
+  id: string;
+  name: string;
+  slug: string;
+  settings: unknown;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+}
+
+export interface AdminUserRecord {
+  id: string;
+  tenantId: string;
+  externalId: string;
+  displayName: string | null;
+  metadata: unknown;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+}
+
 export interface AdminMemoryRecord {
   id: string;
   userId: string;

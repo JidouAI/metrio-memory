@@ -1,10 +1,38 @@
 import { eq } from 'drizzle-orm';
 import type { Database } from '../db';
-import { memories, tenantNotes, tenantMemories } from '../db/schema';
-import type { AdminMemoryRecord, AdminTenantNoteRecord, TenantMemoryRecord } from '../types';
+import { memories, tenantNotes, tenantMemories, tenants, users } from '../db/schema';
+import type { AdminMemoryRecord, AdminTenantNoteRecord, AdminTenantRecord, AdminUserRecord, TenantMemoryRecord } from '../types';
 
 export class AdminService {
   constructor(private db: Database) {}
+
+  async listTenants(): Promise<AdminTenantRecord[]> {
+    return this.db
+      .select({
+        id: tenants.id,
+        name: tenants.name,
+        slug: tenants.slug,
+        settings: tenants.settings,
+        createdAt: tenants.createdAt,
+        updatedAt: tenants.updatedAt,
+      })
+      .from(tenants);
+  }
+
+  async listUsers(tenantId: string): Promise<AdminUserRecord[]> {
+    return this.db
+      .select({
+        id: users.id,
+        tenantId: users.tenantId,
+        externalId: users.externalId,
+        displayName: users.displayName,
+        metadata: users.metadata,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+      })
+      .from(users)
+      .where(eq(users.tenantId, tenantId));
+  }
 
   async listUserMemories(userId: string): Promise<AdminMemoryRecord[]> {
     return this.db

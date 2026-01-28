@@ -30,6 +30,8 @@ import type {
   TenantMemoryRecord,
   AdminMemoryRecord,
   AdminTenantNoteRecord,
+  AdminTenantRecord,
+  AdminUserRecord,
 } from './types';
 
 export class MemoryService {
@@ -58,6 +60,8 @@ export class MemoryService {
   };
 
   public readonly admin: {
+    listTenants: () => Promise<AdminTenantRecord[]>;
+    listUsers: (slug: string) => Promise<AdminUserRecord[]>;
     listUserMemories: (slug: string, userExternalId: string) => Promise<AdminMemoryRecord[]>;
     listTenantNotes: (slug: string) => Promise<AdminTenantNoteRecord[]>;
     listTenantMemories: (slug: string) => Promise<TenantMemoryRecord[]>;
@@ -114,6 +118,14 @@ export class MemoryService {
     };
 
     this.admin = {
+      listTenants: async () => {
+        return this.adminService.listTenants();
+      },
+      listUsers: async (slug) => {
+        const tenant = await this.tenantService.getBySlug(slug);
+        if (!tenant) return [];
+        return this.adminService.listUsers(tenant.id);
+      },
       listUserMemories: async (slug, userExternalId) => {
         const resolved = await this.findExisting(slug, userExternalId);
         if (!resolved) return [];
