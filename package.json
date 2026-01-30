@@ -1,6 +1,6 @@
 {
   "name": "@metrio-ai/memory-service",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Memory Service SDK for Metrio AI - multi-tenant memory management with pgvector",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
