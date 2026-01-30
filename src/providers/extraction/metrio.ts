@@ -50,8 +50,14 @@ export class MetrioExtractionProvider implements ExtractionProvider {
             }))
           : [],
       };
-    } catch {
-      return { memories: [] };
+    } catch (error) {
+      console.error('[MetrioExtractionProvider] Failed to parse extraction response:', {
+        error: error instanceof Error ? error.message : error,
+        response: response.response,
+      });
+      throw new Error(
+        `Failed to parse memory extraction response: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
