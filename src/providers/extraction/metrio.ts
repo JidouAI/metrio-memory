@@ -25,7 +25,7 @@ export class MetrioExtractionProvider implements ExtractionProvider {
 
   async extractMemories(conversation: ConversationMessage[]): Promise<ExtractionResult> {
     const conversationText = conversation
-      .map((m) => `${m.role}: ${m.content}`)
+      .map((m) => `<${m.role}>\n${m.content}\n</${m.role}>`)
       .join('\n');
 
     const response = await this.client.chatCompletion({
