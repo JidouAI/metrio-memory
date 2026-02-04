@@ -62,7 +62,7 @@ export class MemoryService {
 
   public readonly admin: {
     listTenants: () => Promise<AdminTenantRecord[]>;
-    listUsers: (slug: string) => Promise<AdminUserRecord[]>;
+    listUsers: (slug: string, options?: { orderByLastUpdated?: 'asc' | 'desc' }) => Promise<AdminUserRecord[]>;
     searchMemories: (slug: string, query: string, options?: { limit?: number; threshold?: number }) => Promise<AdminSearchResult[]>;
     listUserMemories: (slug: string, userExternalId: string) => Promise<AdminMemoryRecord[]>;
     listTenantNotes: (slug: string) => Promise<AdminTenantNoteRecord[]>;
@@ -72,6 +72,7 @@ export class MemoryService {
     purgeUserAll: (slug: string, userExternalId: string) => Promise<{ memoriesDeleted: number; profileDeleted: boolean }>;
     purgeTenantNotes: (slug: string) => Promise<{ deletedCount: number }>;
     purgeTenantMemories: (slug: string) => Promise<{ deletedCount: number }>;
+    deleteUser: (slug: string, userExternalId: string) => Promise<{ deleted: boolean }>;
   };
 
   constructor(config: MemoryServiceConfig) {
@@ -125,10 +126,10 @@ export class MemoryService {
       listTenants: async () => {
         return this.adminService.listTenants();
       },
-      listUsers: async (slug) => {
+      listUsers: async (slug, options) => {
         const tenant = await this.tenantService.getBySlug(slug);
         if (!tenant) return [];
-        return this.adminService.listUsers(tenant.id);
+        return this.adminService.listUsers(tenant.id, options);
       },
       searchMemories: async (slug, query, options) => {
         const tenant = await this.tenantService.getBySlug(slug);
@@ -174,6 +175,11 @@ export class MemoryService {
         const tenant = await this.tenantService.getBySlug(slug);
         if (!tenant) return { deletedCount: 0 };
         return this.adminService.purgeTenantMemories(tenant.id);
+      },
+      deleteUser: async (slug, userExternalId) => {
+        const resolved = await this.findExisting(slug, userExternalId);
+        if (!resolved) return { deleted: false };
+        return this.adminService.deleteUser(resolved.user.id);
       },
     };
   }

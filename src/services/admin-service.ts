@@ -1,4 +1,4 @@
-import { eq, desc, sql, and, gt } from 'drizzle-orm';
+import { eq, desc, asc, sql, and, gt } from 'drizzle-orm';
 import type { Database } from '../db';
 import { memories, tenantNotes, tenantMemories, tenants, users, userProfiles } from '../db/schema';
 import type { AdminMemoryRecord, AdminTenantNoteRecord, AdminTenantRecord, AdminUserRecord, AdminSearchResult, TenantMemoryRecord, EmbeddingProvider } from '../types';
@@ -22,7 +22,29 @@ export class AdminService {
       .from(tenants);
   }
 
-  async listUsers(tenantId: string): Promise<AdminUserRecord[]> {
+  async listUsers(
+    tenantId: string,
+    options?: { orderByLastUpdated?: 'asc' | 'desc' },
+  ): Promise<AdminUserRecord[]> {
+    if (options?.orderByLastUpdated) {
+      const lastMemoryAt = sql<Date>`(SELECT MAX(${memories.createdAt}) FROM ${memories} WHERE ${memories.userId} = ${users.id})`;
+      const orderFn = options.orderByLastUpdated === 'asc' ? asc : desc;
+
+      return this.db
+        .select({
+          id: users.id,
+          tenantId: users.tenantId,
+          externalId: users.externalId,
+          displayName: users.displayName,
+          metadata: users.metadata,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+        })
+        .from(users)
+        .where(eq(users.tenantId, tenantId))
+        .orderBy(orderFn(lastMemoryAt));
+    }
+
     return this.db
       .select({
         id: users.id,
@@ -168,5 +190,12 @@ export class AdminService {
       .delete(tenantMemories)
       .where(eq(tenantMemories.tenantId, tenantId));
     return { deletedCount: result.rowCount ?? 0 };
+  }
+
+  async deleteUser(userId: string): Promise<{ deleted: boolean }> {
+    const result = await this.db
+      .delete(users)
+      .where(eq(users.id, userId));
+    return { deleted: (result.rowCount ?? 0) > 0 };
   }
 }
