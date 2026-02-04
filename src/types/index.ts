@@ -258,3 +258,13 @@ export interface AdminSearchResult {
   similarity: number;
   createdAt: Date | null;
 }
+
+export interface PaginatedResult<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}

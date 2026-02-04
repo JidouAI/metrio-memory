@@ -142,11 +142,15 @@ Manage and inspect data via `memory.admin.*`:
 // List all tenants
 const tenants = await memory.admin.listTenants();
 
-// List users under a tenant
+// List users under a tenant (with pagination)
 const users = await memory.admin.listUsers('dog-lab');
+// Returns: { data: AdminUserRecord[], pagination: { page, limit, total, totalPages } }
+
+// List users with pagination options
+const paginatedUsers = await memory.admin.listUsers('dog-lab', { limit: 20, page: 2 });
 
 // List users sorted by most recent memory activity
-const activeUsers = await memory.admin.listUsers('dog-lab', { orderByLastUpdated: 'desc' });
+const activeUsers = await memory.admin.listUsers('dog-lab', { orderByLastUpdated: 'desc', limit: 10, page: 1 });
 
 // Semantic search across all users in a tenant
 const results = await memory.admin.searchMemories('dog-lab', 'dog training', {

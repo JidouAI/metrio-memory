@@ -1,7 +1,7 @@
 import { eq, desc, asc, sql, and, gt } from 'drizzle-orm';
 import type { Database } from '../db';
 import { memories, tenantNotes, tenantMemories, tenants, users, userProfiles } from '../db/schema';
-import type { AdminMemoryRecord, AdminTenantNoteRecord, AdminTenantRecord, AdminUserRecord, AdminSearchResult, TenantMemoryRecord, EmbeddingProvider } from '../types';
+import type { AdminMemoryRecord, AdminTenantNoteRecord, AdminTenantRecord, AdminUserRecord, AdminSearchResult, TenantMemoryRecord, EmbeddingProvider, PaginatedResult } from '../types';
 
 export class AdminService {
   constructor(
@@ -24,39 +24,60 @@ export class AdminService {
 
   async listUsers(
     tenantId: string,
-    options?: { orderByLastUpdated?: 'asc' | 'desc' },
-  ): Promise<AdminUserRecord[]> {
+    options?: { orderByLastUpdated?: 'asc' | 'desc'; limit?: number; page?: number },
+  ): Promise<PaginatedResult<AdminUserRecord>> {
+    const limit = options?.limit ?? 20;
+    const page = options?.page ?? 1;
+    const offset = (page - 1) * limit;
+
+    // Get total count
+    const countResult = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(users)
+      .where(eq(users.tenantId, tenantId));
+    const total = Number(countResult[0]?.count ?? 0);
+
+    const selectFields = {
+      id: users.id,
+      tenantId: users.tenantId,
+      externalId: users.externalId,
+      displayName: users.displayName,
+      metadata: users.metadata,
+      createdAt: users.createdAt,
+      updatedAt: users.updatedAt,
+    };
+
+    let data: AdminUserRecord[];
+
     if (options?.orderByLastUpdated) {
       const lastMemoryAt = sql<Date>`(SELECT MAX(${memories.createdAt}) FROM ${memories} WHERE ${memories.userId} = ${users.id})`;
       const orderFn = options.orderByLastUpdated === 'asc' ? asc : desc;
 
-      return this.db
-        .select({
-          id: users.id,
-          tenantId: users.tenantId,
-          externalId: users.externalId,
-          displayName: users.displayName,
-          metadata: users.metadata,
-          createdAt: users.createdAt,
-          updatedAt: users.updatedAt,
-        })
+      data = await this.db
+        .select(selectFields)
         .from(users)
         .where(eq(users.tenantId, tenantId))
-        .orderBy(orderFn(lastMemoryAt));
+        .orderBy(orderFn(lastMemoryAt))
+        .limit(limit)
+        .offset(offset);
+    } else {
+      data = await this.db
+        .select(selectFields)
+        .from(users)
+        .where(eq(users.tenantId, tenantId))
+        .limit(limit)
+        .offset(offset);
     }
 
-    return this.db
-      .select({
-        id: users.id,
-        tenantId: users.tenantId,
-        externalId: users.externalId,
-        displayName: users.displayName,
-        metadata: users.metadata,
-        createdAt: users.createdAt,
-        updatedAt: users.updatedAt,
-      })
-      .from(users)
-      .where(eq(users.tenantId, tenantId));
+    return {
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async searchMemories(

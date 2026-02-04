@@ -33,6 +33,7 @@ import type {
   AdminTenantRecord,
   AdminUserRecord,
   AdminSearchResult,
+  PaginatedResult,
 } from './types';
 
 export class MemoryService {
@@ -62,7 +63,7 @@ export class MemoryService {
 
   public readonly admin: {
     listTenants: () => Promise<AdminTenantRecord[]>;
-    listUsers: (slug: string, options?: { orderByLastUpdated?: 'asc' | 'desc' }) => Promise<AdminUserRecord[]>;
+    listUsers: (slug: string, options?: { orderByLastUpdated?: 'asc' | 'desc'; limit?: number; page?: number }) => Promise<PaginatedResult<AdminUserRecord>>;
     searchMemories: (slug: string, query: string, options?: { limit?: number; threshold?: number }) => Promise<AdminSearchResult[]>;
     listUserMemories: (slug: string, userExternalId: string) => Promise<AdminMemoryRecord[]>;
     listTenantNotes: (slug: string) => Promise<AdminTenantNoteRecord[]>;
@@ -128,7 +129,12 @@ export class MemoryService {
       },
       listUsers: async (slug, options) => {
         const tenant = await this.tenantService.getBySlug(slug);
-        if (!tenant) return [];
+        if (!tenant) {
+          return {
+            data: [],
+            pagination: { page: options?.page ?? 1, limit: options?.limit ?? 20, total: 0, totalPages: 0 },
+          };
+        }
         return this.adminService.listUsers(tenant.id, options);
       },
       searchMemories: async (slug, query, options) => {
