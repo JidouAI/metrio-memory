@@ -142,9 +142,10 @@ Manage and inspect data via `memory.admin.*`:
 // List all tenants
 const tenants = await memory.admin.listTenants();
 
-// List users under a tenant (with pagination)
+// List users under a tenant (with pagination, includes profile summary)
 const users = await memory.admin.listUsers('dog-lab');
 // Returns: { data: AdminUserRecord[], pagination: { page, limit, total, totalPages } }
+// AdminUserRecord includes: id, tenantId, externalId, displayName, metadata, createdAt, updatedAt, summary
 
 // List users with pagination options
 const paginatedUsers = await memory.admin.listUsers('dog-lab', { limit: 20, page: 2 });

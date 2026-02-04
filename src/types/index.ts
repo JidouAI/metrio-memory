@@ -219,6 +219,7 @@ export interface AdminUserRecord {
   metadata: unknown;
   createdAt: Date | null;
   updatedAt: Date | null;
+  summary: string | null;
 }
 
 export interface AdminMemoryRecord {

@@ -45,6 +45,7 @@ export class AdminService {
       metadata: users.metadata,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
+      summary: userProfiles.summary,
     };
 
     let data: AdminUserRecord[];
@@ -56,6 +57,7 @@ export class AdminService {
       data = await this.db
         .select(selectFields)
         .from(users)
+        .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
         .where(eq(users.tenantId, tenantId))
         .orderBy(orderFn(lastMemoryAt))
         .limit(limit)
@@ -64,6 +66,7 @@ export class AdminService {
       data = await this.db
         .select(selectFields)
         .from(users)
+        .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
         .where(eq(users.tenantId, tenantId))
         .limit(limit)
         .offset(offset);
