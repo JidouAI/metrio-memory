@@ -145,6 +145,9 @@ const tenants = await memory.admin.listTenants();
 // List users under a tenant
 const users = await memory.admin.listUsers('dog-lab');
 
+// List users sorted by most recent memory activity
+const activeUsers = await memory.admin.listUsers('dog-lab', { orderByLastUpdated: 'desc' });
+
 // Semantic search across all users in a tenant
 const results = await memory.admin.searchMemories('dog-lab', 'dog training', {
   limit: 10,
@@ -165,6 +168,9 @@ await memory.admin.purgeUserProfile('dog-lab', 'LINE_USER_ID');   // profile onl
 await memory.admin.purgeUserAll('dog-lab', 'LINE_USER_ID');       // memories + profile
 await memory.admin.purgeTenantNotes('dog-lab');
 await memory.admin.purgeTenantMemories('dog-lab');
+
+// Delete user (cascades to memories and profile)
+await memory.admin.deleteUser('dog-lab', 'LINE_USER_ID');
 ```
 
 ### `context.formatted` vs `getProfileSummary()`
