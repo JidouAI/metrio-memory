@@ -79,6 +79,15 @@ export class MetrioExtractionProvider implements ExtractionProvider {
       ],
     });
 
-    return response.response;
+    const raw = response.response;
+    try {
+      const parsed = JSON.parse(raw);
+      if (typeof parsed === 'object' && parsed !== null) {
+        return parsed.new_memories ? parsed.new_memories.join('\n') : parsed.existing_summary || parsed.summary || parsed.merged_summary || raw;
+      }
+    } catch {
+      // Not JSON — expected behavior, return as-is
+    }
+    return raw;
   }
 }
