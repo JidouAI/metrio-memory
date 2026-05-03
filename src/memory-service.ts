@@ -15,6 +15,7 @@ import type {
   ExtractionProvider,
   GetContextOptions,
   ContextResult,
+  ConversationMessage,
   ProcessConversationInput,
   SearchInput,
   SearchResult,
@@ -34,7 +35,19 @@ import type {
   AdminUserRecord,
   AdminSearchResult,
   PaginatedResult,
+  SyncMemoryInput,
+  SyncMemoryResult,
+  SyncMemoryFailure,
+  ExistingMemoryContext,
+  MemoryOperation,
+  MemoryOperationType,
 } from './types';
+
+const DEFAULT_RECENT_MEMORIES_LIMIT = 10;
+const DEFAULT_RELEVANT_MEMORIES_LIMIT = 10;
+const DEFAULT_RELEVANT_SEARCH_THRESHOLD = 0.5;
+const DEFAULT_ALLOWED_OPERATIONS: MemoryOperationType[] = ['ADD', 'NOOP'];
+const MAX_USER_QUERY_CHARS = 2000;
 
 export class MemoryService {
   private pool: Pool;
@@ -220,6 +233,7 @@ export class MemoryService {
     return { profile, recentMemories, orgNotes, orgMemories, formatted };
   }
 
+  /** @deprecated Use {@link MemoryService.syncMemory} instead. Legacy two-prompt flow kept for backward compatibility. */
   async processConversation(input: ProcessConversationInput): Promise<{
     memories: MemoryRecord[];
     profileUpdated: boolean;
@@ -255,6 +269,131 @@ export class MemoryService {
     }
 
     return { memories: savedMemories, profileUpdated };
+  }
+
+  async syncMemory(input: SyncMemoryInput): Promise<SyncMemoryResult> {
+    if (!this.extractionProvider) {
+      throw new Error('Extraction provider is required for syncMemory');
+    }
+    if (!this.extractionProvider.syncMemory) {
+      throw new Error(
+        'Configured extraction provider does not implement syncMemory. Set memoryUpdatePromptId for the metrio provider, or implement syncMemory on your custom extractor.',
+      );
+    }
+
+    const allowedOperations: MemoryOperationType[] =
+      input.options?.allowedOperations ?? DEFAULT_ALLOWED_OPERATIONS;
+    const recentLimit = input.options?.recentMemoriesContextLimit ?? DEFAULT_RECENT_MEMORIES_LIMIT;
+    const relevantLimit = input.options?.relevantMemoriesContextLimit ?? DEFAULT_RELEVANT_MEMORIES_LIMIT;
+
+    const { user } = await this.resolveOrCreate(input.tenantSlug, input.userExternalId);
+
+    const [existingProfile, existingMemories] = await Promise.all([
+      this.profileService.get(user.id),
+      this.gatherExistingMemoriesContext(user.id, input.conversation, recentLimit, relevantLimit),
+    ]);
+
+    const result = await this.extractionProvider.syncMemory({
+      conversation: input.conversation,
+      existingSummary: existingProfile?.summary ?? '',
+      existingMemories,
+      allowedOperations,
+    });
+
+    const existingById = new Map(existingMemories.map((m) => [m.id, m]));
+
+    type OpOutcome =
+      | { kind: 'add'; record: MemoryRecord }
+      | { kind: 'update'; record: MemoryRecord }
+      | { kind: 'delete'; id: string }
+      | null;
+
+    const settled = await Promise.allSettled<OpOutcome>(
+      result.operations.map((op) => this.applyOperation(op, user.id, allowedOperations, existingById, input.conversation)),
+    );
+
+    const added: MemoryRecord[] = [];
+    const updated: MemoryRecord[] = [];
+    const deleted: string[] = [];
+    const failures: SyncMemoryFailure[] = [];
+    settled.forEach((s, i) => {
+      if (s.status === 'rejected') {
+        failures.push({
+          op: result.operations[i],
+          error: s.reason instanceof Error ? s.reason.message : String(s.reason),
+        });
+        return;
+      }
+      const r = s.value;
+      if (!r) return;
+      if (r.kind === 'add') added.push(r.record);
+      else if (r.kind === 'update') updated.push(r.record);
+      else deleted.push(r.id);
+    });
+
+    const summaryChanged =
+      result.updatedSummary.trim().length > 0 &&
+      result.updatedSummary !== (existingProfile?.summary ?? '');
+    const summary = summaryChanged
+      ? await this.profileService.upsert(user.id, result.updatedSummary)
+      : existingProfile;
+
+    return { operations: result.operations, added, updated, deleted, failures, summary };
+  }
+
+  private async applyOperation(
+    op: MemoryOperation,
+    userId: string,
+    allowedOperations: MemoryOperationType[],
+    existingById: Map<string, ExistingMemoryContext>,
+    conversation: ConversationMessage[],
+  ): Promise<
+    | { kind: 'add'; record: MemoryRecord }
+    | { kind: 'update'; record: MemoryRecord }
+    | { kind: 'delete'; id: string }
+    | null
+  > {
+    if (!allowedOperations.includes(op.op)) return null;
+
+    switch (op.op) {
+      case 'ADD': {
+        if (!op.content.trim()) return null;
+        const record = await this.memoryStore.add({
+          userId,
+          content: op.content,
+          memoryType: op.memoryType,
+          importance: op.importance,
+          rawConversation: conversation,
+        });
+        return { kind: 'add', record };
+      }
+      case 'UPDATE': {
+        if (!existingById.has(op.id)) {
+          console.warn('[MemoryService.syncMemory] Dropping UPDATE for id not in context:', op.id);
+          return null;
+        }
+        const existing = existingById.get(op.id);
+        const contentChanged = op.content !== undefined && existing?.content !== op.content;
+        const record = await this.memoryStore.update({
+          id: op.id,
+          userId,
+          content: contentChanged ? op.content : undefined,
+          memoryType: op.memoryType,
+          importance: op.importance,
+        });
+        return record ? { kind: 'update', record } : null;
+      }
+      case 'DELETE': {
+        if (!existingById.has(op.id)) {
+          console.warn('[MemoryService.syncMemory] Dropping DELETE for id not in context:', op.id);
+          return null;
+        }
+        const ok = await this.memoryStore.deleteById({ id: op.id, userId });
+        return ok ? { kind: 'delete', id: op.id } : null;
+      }
+      case 'NOOP':
+        return null;
+    }
   }
 
   async search(input: SearchInput): Promise<SearchResult[]> {
@@ -309,6 +448,45 @@ export class MemoryService {
   }
 
   // --- Private helpers ---
+
+  private async gatherExistingMemoriesContext(
+    userId: string,
+    conversation: ConversationMessage[],
+    recentLimit: number,
+    relevantLimit: number,
+  ): Promise<ExistingMemoryContext[]> {
+    const userQuery = conversation
+      .filter((m) => m.role === 'user')
+      .map((m) => m.content)
+      .join('\n')
+      .trim()
+      .slice(-MAX_USER_QUERY_CHARS);
+
+    const [recent, relevant] = await Promise.all([
+      recentLimit > 0 ? this.memoryStore.getRecent(userId, recentLimit) : Promise.resolve([]),
+      relevantLimit > 0 && userQuery.length > 0
+        ? this.memoryStore.search({
+            userId,
+            query: userQuery,
+            limit: relevantLimit,
+            threshold: DEFAULT_RELEVANT_SEARCH_THRESHOLD,
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const project = (m: ExistingMemoryContext): ExistingMemoryContext => ({
+      id: m.id,
+      content: m.content,
+      memoryType: m.memoryType,
+      importance: m.importance,
+    });
+
+    const byId = new Map<string, ExistingMemoryContext>();
+    for (const m of [...recent, ...relevant]) {
+      if (!byId.has(m.id)) byId.set(m.id, project(m));
+    }
+    return Array.from(byId.values());
+  }
 
   private async resolveOrCreate(tenantSlug: string, userExternalId: string) {
     const tenant = await this.tenantService.getOrCreate(tenantSlug);

@@ -16,6 +16,7 @@ export function createExtractionProvider(config: ExtractionConfig): ExtractionPr
         projectId: config.projectId,
         extractionPromptId: config.extractionPromptId,
         summaryMergerPromptId: config.summaryMergerPromptId,
+        memoryUpdatePromptId: config.memoryUpdatePromptId,
         baseUrl: config.baseUrl,
       });
     case 'custom':

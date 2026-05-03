@@ -80,4 +80,39 @@ export class MemoryStore {
       .orderBy(desc(memories.createdAt))
       .limit(limit);
   }
+
+  async update(input: {
+    id: string;
+    userId: string;
+    content?: string;
+    memoryType?: string;
+    importance?: number;
+  }): Promise<MemoryRecord | null> {
+    const updates: Record<string, unknown> = {};
+    if (input.content !== undefined) {
+      updates.content = input.content;
+      updates.embedding = await this.embeddingProvider.embed(input.content);
+    }
+    if (input.memoryType !== undefined) updates.memoryType = input.memoryType;
+    if (input.importance !== undefined) updates.importance = input.importance;
+
+    if (Object.keys(updates).length === 0) return null;
+
+    const result = await this.db
+      .update(memories)
+      .set(updates)
+      .where(and(eq(memories.id, input.id), eq(memories.userId, input.userId)))
+      .returning();
+
+    return result[0] ?? null;
+  }
+
+  async deleteById(input: { id: string; userId: string }): Promise<boolean> {
+    const result = await this.db
+      .delete(memories)
+      .where(and(eq(memories.id, input.id), eq(memories.userId, input.userId)))
+      .returning({ id: memories.id });
+
+    return result.length > 0;
+  }
 }
