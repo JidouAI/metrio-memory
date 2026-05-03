@@ -331,11 +331,12 @@ export class MemoryService {
       else deleted.push(r.id);
     });
 
+    const trimmedSummary = result.updatedSummary.trim();
     const summaryChanged =
-      result.updatedSummary.trim().length > 0 &&
-      result.updatedSummary !== (existingProfile?.summary ?? '');
+      trimmedSummary.length > 0 &&
+      trimmedSummary !== (existingProfile?.summary ?? '');
     const summary = summaryChanged
-      ? await this.profileService.upsert(user.id, result.updatedSummary)
+      ? await this.profileService.upsert(user.id, trimmedSummary)
       : existingProfile;
 
     return { operations: result.operations, added, updated, deleted, failures, summary };
