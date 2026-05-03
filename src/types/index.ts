@@ -12,6 +12,7 @@ export interface ExtractionConfig {
   projectId?: string;
   extractionPromptId?: number;
   summaryMergerPromptId?: number;
+  memoryUpdatePromptId?: number;
   baseUrl?: string;
   customExtractor?: ExtractionProvider;
 }
@@ -42,6 +43,51 @@ export interface ExtractedMemory {
 export interface ExtractionProvider {
   extractMemories(conversation: ConversationMessage[]): Promise<ExtractionResult>;
   mergeSummary(existingSummary: string, newMemories: string[]): Promise<string>;
+  syncMemory?(input: SyncMemoryProviderInput): Promise<SyncMemoryProviderResult>;
+}
+
+// --- Sync Memory (combined extract + merge) ---
+
+export type MemoryOperationType = 'ADD' | 'UPDATE' | 'DELETE' | 'NOOP';
+
+export type MemoryOperation =
+  | {
+      op: 'ADD';
+      content: string;
+      memoryType: string;
+      importance: number;
+      reason?: string;
+    }
+  | {
+      op: 'UPDATE';
+      id: string;
+      content?: string;
+      memoryType?: string;
+      importance?: number;
+      reason?: string;
+    }
+  | {
+      op: 'DELETE';
+      id: string;
+      reason?: string;
+    }
+  | {
+      op: 'NOOP';
+      reason?: string;
+    };
+
+export type ExistingMemoryContext = Pick<MemoryRecord, 'id' | 'content' | 'memoryType' | 'importance'>;
+
+export interface SyncMemoryProviderInput {
+  conversation: ConversationMessage[];
+  existingSummary: string;
+  existingMemories: ExistingMemoryContext[];
+  allowedOperations: MemoryOperationType[];
+}
+
+export interface SyncMemoryProviderResult {
+  operations: MemoryOperation[];
+  updatedSummary: string;
 }
 
 // --- Conversation ---
@@ -75,6 +121,35 @@ export interface ProcessConversationInput {
   tenantSlug: string;
   userExternalId: string;
   conversation: ConversationMessage[];
+}
+
+// --- Sync Memory (public API) ---
+
+export interface SyncMemoryOptions {
+  recentMemoriesContextLimit?: number;
+  relevantMemoriesContextLimit?: number;
+  allowedOperations?: MemoryOperationType[];
+}
+
+export interface SyncMemoryInput {
+  tenantSlug: string;
+  userExternalId: string;
+  conversation: ConversationMessage[];
+  options?: SyncMemoryOptions;
+}
+
+export interface SyncMemoryFailure {
+  op: MemoryOperation;
+  error: string;
+}
+
+export interface SyncMemoryResult {
+  operations: MemoryOperation[];
+  added: MemoryRecord[];
+  updated: MemoryRecord[];
+  deleted: string[];
+  failures: SyncMemoryFailure[];
+  summary: ProfileSummary | null;
 }
 
 // --- Search ---

@@ -70,13 +70,52 @@ await memory.close();
 | Method | Description |
 |---|---|
 | `getContext(tenant, userId, options?)` | Load context before a conversation (profile, recent memories, org notes/memories) |
-| `processConversation(input)` | Extract memories from a conversation and update user profile |
+| `syncMemory(input)` | **Recommended.** Single-prompt extract + merge with ADD/UPDATE/DELETE/NOOP operations. Sees existing state to dedup. |
+| `processConversation(input)` | Legacy two-prompt flow. Extract memories then merge profile. |
 | `search(input)` | Semantic search user memories |
 | `getRecentMemories(tenant, userId, options?)` | Get recent memories by recency |
 | `addMemory(input)` | Directly add a memory |
 | `updateProfileSummary(input)` | Update user profile summary |
 | `getProfileSummary(tenant, userId)` | Get user profile summary |
 | `close()` | Close the database connection pool |
+
+### Sync Memory (recommended)
+
+Single LLM call that sees the user's existing summary plus the most relevant
+existing memories, then emits explicit operations. Reduces duplicate memories
+and lets the model correct stale ones.
+
+```typescript
+const result = await memory.syncMemory({
+  tenantSlug: 'dog-lab',
+  userExternalId: 'LINE_USER_ID',
+  conversation: [
+    { role: 'user', content: '我想幫狗狗報名訓練課' },
+    { role: 'assistant', content: '好的！您的狗狗幾歲？' },
+    { role: 'user', content: '3 歲，柴犬' },
+  ],
+  options: {
+    allowedOperations: ['ADD', 'NOOP'],   // start conservative; widen later
+    recentMemoriesContextLimit: 10,
+    relevantMemoriesContextLimit: 10,
+  },
+});
+
+// result.operations  → audit trail of what the LLM decided
+// result.added       → MemoryRecord[] inserted
+// result.updated     → MemoryRecord[] modified
+// result.deleted     → string[] of deleted memory ids
+// result.failures    → SyncMemoryFailure[] ops that threw (allSettled isolates per-op failure)
+// result.summary     → ProfileSummary | null (updated only if summary actually changed)
+```
+
+Requires `memoryUpdatePromptId` in the extraction config — see
+[`docs/sync-memory.md`](docs/sync-memory.md) for the prompt I/O contract,
+phased rollout plan, and design rationale.
+
+For prompt-author guidance (how to actually write a good memory prompt — taxonomy,
+worked examples, common pitfalls, quality rubric, copy-pasteable starter template)
+see [`docs/memory-prompt-guide.md`](docs/memory-prompt-guide.md).
 
 ### Context
 
@@ -200,8 +239,9 @@ interface MemoryServiceConfig {
     provider: 'metrio' | 'custom';
     apiKey?: string;
     projectId?: string;
-    extractionPromptId?: number;
-    summaryMergerPromptId?: number;
+    extractionPromptId?: number;     // legacy processConversation
+    summaryMergerPromptId?: number;  // legacy processConversation
+    memoryUpdatePromptId?: number;   // syncMemory (recommended)
     baseUrl?: string;
     customExtractor?: ExtractionProvider;
   };
