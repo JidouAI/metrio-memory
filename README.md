@@ -239,9 +239,11 @@ interface MemoryServiceConfig {
     provider: 'metrio' | 'custom';
     apiKey?: string;
     projectId?: string;
-    extractionPromptId?: number;     // legacy processConversation
-    summaryMergerPromptId?: number;  // legacy processConversation
-    memoryUpdatePromptId?: number;   // syncMemory (recommended)
+    // All prompt IDs are validated lazily — only required when the corresponding
+    // method is called. You can configure just the IDs you actually use.
+    extractionPromptId?: number;     // required for processConversation()
+    summaryMergerPromptId?: number;  // required for processConversation()
+    memoryUpdatePromptId?: number;   // required for syncMemory() (recommended)
     baseUrl?: string;
     customExtractor?: ExtractionProvider;
   };

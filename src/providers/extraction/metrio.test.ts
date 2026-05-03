@@ -141,3 +141,29 @@ describe('MetrioExtractionProvider.syncMemory', () => {
     expect(payload.allowed_operations).toEqual(['ADD', 'NOOP']);
   });
 });
+
+describe('MetrioExtractionProvider lazy prompt-id validation', () => {
+  beforeEach(() => {
+    chatCompletion.mockReset();
+  });
+
+  it('constructs without any prompt IDs', () => {
+    expect(
+      () => new MetrioExtractionProvider({ apiKey: 'k', projectId: 'p' }),
+    ).not.toThrow();
+  });
+
+  it('throws on extractMemories when extractionPromptId is not configured', async () => {
+    const provider = new MetrioExtractionProvider({ apiKey: 'k', projectId: 'p' });
+    await expect(provider.extractMemories([{ role: 'user', content: 'hi' }])).rejects.toThrow(
+      /extractionPromptId is not configured/,
+    );
+  });
+
+  it('throws on mergeSummary when summaryMergerPromptId is not configured', async () => {
+    const provider = new MetrioExtractionProvider({ apiKey: 'k', projectId: 'p' });
+    await expect(provider.mergeSummary('existing', ['new'])).rejects.toThrow(
+      /summaryMergerPromptId is not configured/,
+    );
+  });
+});
