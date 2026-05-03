@@ -35,7 +35,7 @@ export class MetrioExtractionProvider implements ExtractionProvider {
   }
 
   async extractMemories(conversation: ConversationMessage[]): Promise<ExtractionResult> {
-    if (!this.extractionPromptId) {
+    if (this.extractionPromptId == null) {
       throw new Error(
         'extractionPromptId is not configured. Set it in extraction config to use processConversation/extractMemories, or use syncMemory instead.',
       );
@@ -70,7 +70,7 @@ export class MetrioExtractionProvider implements ExtractionProvider {
   }
 
   async syncMemory(input: SyncMemoryProviderInput): Promise<SyncMemoryProviderResult> {
-    if (!this.memoryUpdatePromptId) {
+    if (this.memoryUpdatePromptId == null) {
       throw new Error(
         'memoryUpdatePromptId is not configured. Set it in extraction config to use syncMemory.',
       );
@@ -123,7 +123,7 @@ export class MetrioExtractionProvider implements ExtractionProvider {
   }
 
   async mergeSummary(existingSummary: string, newMemories: string[]): Promise<string> {
-    if (!this.summaryMergerPromptId) {
+    if (this.summaryMergerPromptId == null) {
       throw new Error(
         'summaryMergerPromptId is not configured. Set it in extraction config to use processConversation/mergeSummary, or use syncMemory instead.',
       );
