@@ -12,15 +12,15 @@ import type {
 export class MetrioExtractionProvider implements ExtractionProvider {
   private client: MetrioAI;
   private projectId: string;
-  private extractionPromptId: number;
-  private summaryMergerPromptId: number;
+  private extractionPromptId?: number;
+  private summaryMergerPromptId?: number;
   private memoryUpdatePromptId?: number;
 
   constructor(config: {
     apiKey: string;
     projectId: string;
-    extractionPromptId: number;
-    summaryMergerPromptId: number;
+    extractionPromptId?: number;
+    summaryMergerPromptId?: number;
     memoryUpdatePromptId?: number;
     baseUrl?: string;
   }) {
@@ -35,6 +35,11 @@ export class MetrioExtractionProvider implements ExtractionProvider {
   }
 
   async extractMemories(conversation: ConversationMessage[]): Promise<ExtractionResult> {
+    if (!this.extractionPromptId) {
+      throw new Error(
+        'extractionPromptId is not configured. Set it in extraction config to use processConversation/extractMemories, or use syncMemory instead.',
+      );
+    }
     const response = await this.client.chatCompletion({
       projectId: this.projectId,
       promptId: this.extractionPromptId,
@@ -118,6 +123,11 @@ export class MetrioExtractionProvider implements ExtractionProvider {
   }
 
   async mergeSummary(existingSummary: string, newMemories: string[]): Promise<string> {
+    if (!this.summaryMergerPromptId) {
+      throw new Error(
+        'summaryMergerPromptId is not configured. Set it in extraction config to use processConversation/mergeSummary, or use syncMemory instead.',
+      );
+    }
     const response = await this.client.chatCompletion({
       projectId: this.projectId,
       promptId: this.summaryMergerPromptId,

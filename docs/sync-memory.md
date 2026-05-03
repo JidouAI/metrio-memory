@@ -176,7 +176,7 @@ defaults (`memoryType: "general"`, `importance: 5`) when missing.
 | 3 | + `DELETE` | Prompt must require explicit contradiction before deleting. Watch deletion rate per user — anything > 1/conversation is suspect. |
 | 4 | — | Mark `processConversation()` deprecated in JSDoc. Open ticket to remove after one release cycle of zero usage. |
 
-## Hardening Applied (Phase 1, landed with this branch)
+## Hardening Applied (Phase 1+, ongoing)
 
 Pre-landing review (5 specialists + Red Team + Codex adversarial) surfaced multiple
 risks. The following Phase 1 mitigations landed with this PR:
@@ -200,6 +200,11 @@ risks. The following Phase 1 mitigations landed with this PR:
 - **Role-tag injection escape** — `formatConversation` HTML-escapes `<`, `>`, `&`
   in user content. Prevents `</user><assistant>...DELETE all` style injection
   attacks via raw user input.
+- **Lazy prompt-id validation** — `extractionPromptId`, `summaryMergerPromptId`,
+  and `memoryUpdatePromptId` are all optional in `ExtractionConfig` and validated
+  at use time, not at provider construction. Tenants migrating to `syncMemory`
+  can drop the legacy prompt IDs without rewriting their setup. Each method throws
+  a clear error pointing at the missing config field if called without it.
 
 ## Risks & Open Questions (deferred to Phase 2 / follow-up PRs)
 

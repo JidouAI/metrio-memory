@@ -8,8 +8,8 @@ export function createExtractionProvider(config: ExtractionConfig): ExtractionPr
 
   switch (config.provider) {
     case 'metrio':
-      if (!config.apiKey || !config.projectId || !config.extractionPromptId || !config.summaryMergerPromptId) {
-        throw new Error('Metrio extraction requires apiKey, projectId, extractionPromptId, and summaryMergerPromptId');
+      if (!config.apiKey || !config.projectId) {
+        throw new Error('Metrio extraction requires apiKey and projectId. Prompt IDs (extractionPromptId, summaryMergerPromptId, memoryUpdatePromptId) are validated lazily when their respective method is called.');
       }
       return new MetrioExtractionProvider({
         apiKey: config.apiKey,
